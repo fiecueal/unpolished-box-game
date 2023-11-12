@@ -60,20 +60,22 @@ end
 
 def reflect_player hit_block
   return unless hit_block
-  puts hit_block
-  # hit_block.hp -= 1
-  return @blocks.delete hit_block if (hit_block.hp -= 1).zero?
+  @blocks.delete hit_block if (hit_block.hp -= 1).zero?
 
   hit_block.path = "sprites/block_#{hit_block.hp}.png"
 
   if @player.dx.to_i.zero?
-    return @player.dy = -@player.dy
-  end
+    if @player.dy > 0 then @player.y = hit_block.bottom - @player.h
+    else                   @player.y = hit_block.top
+    end
 
-  if @player.dy.to_i.zero?
-    @player_actions.key(@player.action)
+    @player.dy = -@player.dy
+  elsif @player.dy.to_i.zero?
+    if @player.dx > 0 then @player.x = hit_block.left - @player.w
+    else                   @player.x = hit_block.right
+    end
 
-    return @player.dx = -@player.dx
+    @player.dx = -player.dx
   end
 end
 
