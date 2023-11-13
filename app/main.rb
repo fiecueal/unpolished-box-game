@@ -130,18 +130,34 @@ def tick args
     @player.to_border,
     { x: 0, y: 700, w: timer_flipped * 1280, h: 20, r: 100 }.solid!,
   ]
+
+  debug args
+end
+
+def debug args
+  if args.inputs.keyboard.r
+    args.gtk.reset
+  end
+
+  if args.inputs.mouse.click
+    case args.inputs.mouse.button_bits
+    when 1 # left click to spawn breakable block
+      @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y, 3)
+    when 2 # middle click to delete all blocks containing pointer
+      (args.geometry.find_all_intersect_rect(args.inputs.mouse,@blocks)).each do |block|
+        @blocks.delete block
+      end
+    when 4 # right click to spawn unbreakable block
+      @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y)
+    end
+    puts @blocks
+  end
+
   args.outputs.debug << [
     args.gtk.framerate_diagnostics_primitives,
     # args.layout.debug_primitives,
     { x: 0, y: 20, text: "#{@player.dx}, #{@player.dy}" },
   ]
-
-  args.gtk.reset if args.inputs.keyboard.r
-
-  if args.inputs.mouse.click
-    @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y)
-  end
-
   # if args.inputs.keyboard.key_down.f
   #   args.gtk.console.show
   #   args.gtk.benchmark iterations: 1000,
