@@ -1,6 +1,7 @@
 def boot args = $args
   # inputs.left_right only check wasd & arrows keys so ijl are checked separately
   @player_actions = { grounded: -> args {
+    return @player.action = @player_actions.freefall unless @player.platform
     if    args.inputs.keyboard.j then dir = -1
     elsif args.inputs.keyboard.l then dir = 1
     else                              dir = args.inputs.left_right
@@ -9,6 +10,27 @@ def boot args = $args
     @player.dx               += dir * @stat_mods.accel - @player.dx * @stat_mods.friction
     @player.angle             = -@player.dx
     @player.flip_horizontally = @player.dx < 0
+
+    # if player steps off current platform or it breaks,
+    # check if a block exists just below the player and switch platforms
+    # else start falling
+    if @player.left > @player.platform.right ||
+       @player.right < @player.platform.left ||
+       @player.platform.hp && @player.platform.hp.zero?
+      new_block = args.
+                  geometry.
+                  find_intersect_rect([@player.x,
+                                       @player.y - 1,
+                                       @player.w,
+                                       @player.h],
+                                      @blocks)
+      if new_block
+        @player.platform = new_block
+      else
+        @player.platform = nil
+        @player.action = @player_actions.freefall
+      end
+    end
 
     if args.inputs.up || args.inputs.keyboard.i
       @jump_tick       = args.state.tick_count
@@ -71,18 +93,6 @@ def new_block x, y, hp = nil
     hp: hp }
 end
 
-def drop_player
-  return unless @player.platform
-
-  if @player.left > @player.platform.right || @player.right < @player.platform.left
-    @player.platform = nil
-    @player.action = @player_actions.freefall
-  elsif @player.platform.hp && @player.platform.hp.zero?
-    @player.platform = nil
-    @player.action = @player_actions.freefall
-  end
-end
-
 # only handles collision when player is in motion
 def reflect_player hit_block
   return unless hit_block
@@ -125,7 +135,6 @@ def tick args
   @player.y    += @player.dy
 
   reflect_player args.geometry.find_intersect_rect(@player, @blocks)
-  drop_player
 
   @player.action.call args
 
