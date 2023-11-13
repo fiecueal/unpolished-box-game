@@ -59,11 +59,10 @@ def boot args = $args
   puts 'arrows: ←↑→'
 end
 
-def new_block x, y
-  { x: x, y: y, w: 70, h: 70,
-    path: "sprites/block_3.png",
-    anchor_x: 0.5, anchor_y: 0.5,
-    hp: 3 }
+def new_block x, y, hp = nil
+  { x: x, y: y, w: 64, h: 64,
+    path: "sprites/block_#{hp}.png",
+    hp: hp }
 end
 
 def drop_player
