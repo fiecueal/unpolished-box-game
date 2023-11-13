@@ -52,11 +52,17 @@ def boot args = $args
     platform: nil,
   }
 
-  @blocks = []
-  @blocks << new_block(500, 35)
-  @blocks << new_block(60, 335)
+  @blocks = 20.map do |x|
+    if x.zero? || x == 19
+      4.map { |y| new_block(64 * x, 64 * y) }
+    else
+      new_block(64 * x, 0)
+    end
+  end
+  @blocks.flatten!
 
   puts 'arrows: ←↑→'
+  puts @blocks
 end
 
 def new_block x, y, hp = nil
