@@ -11,9 +11,10 @@ def boot args = $args
     @player.flip_horizontally = @player.dx < 0
 
     if args.inputs.up || args.inputs.keyboard.i
-      @jump_tick     = args.state.tick_count
-      @player.dy     = 10 * @stat_mods.jump
-      @player.action = @player_actions.jumping
+      @jump_tick       = args.state.tick_count
+      @player.dy       = 10 * @stat_mods.jump
+      @player.action   = @player_actions.jumping
+      @player.platform = nil
     end
   }, jumping: -> args {
     @player.angle = Math::atan(@player.dy / @player.dx) * 180 / Math::PI
@@ -48,6 +49,7 @@ def boot args = $args
     path: "sprites/fish.png",
     angle: 0, anchor_x: 0.5, anchor_y: 0.5,
     action: @player_actions.freefall,
+    platform: nil,
   }
 
   @blocks = []
@@ -62,6 +64,18 @@ def new_block x, y
     path: "sprites/block_3.png",
     anchor_x: 0.5, anchor_y: 0.5,
     hp: 3 }
+end
+
+def drop_player
+  return unless @player.platform
+
+  if @player.left > @player.platform.right || @player.right < @player.platform.left
+    @player.platform = nil
+    @player.action = @player_actions.freefall
+  elsif @player.platform.hp && @player.platform.hp.zero?
+    @player.platform = nil
+    @player.action = @player_actions.freefall
+  end
 end
 
 # only handles collision when player is in motion
@@ -81,9 +95,10 @@ def reflect_player hit_block
   left_cl   = @player.right   - hit_block.left
 
   if top_cl < bottom_cl && top_cl < left_cl && top_cl < right_cl
-    @player.y  = hit_block.top
-    @player.dy = 0
-    @player.action = @player_actions.grounded
+    @player.y        = hit_block.top
+    @player.dy       = 0
+    @player.action   = @player_actions.grounded
+    @player.platform = hit_block
   elsif bottom_cl < left_cl && bottom_cl < right_cl
     @player.y  = hit_block.bottom - @player.h
     @player.dy = -@player.dy
@@ -105,12 +120,14 @@ def tick args
   @player.y    += @player.dy
 
   reflect_player args.geometry.find_intersect_rect(@player, @blocks)
+  drop_player
 
   @player.action.call args
 
   args.outputs.primitives << [
     @blocks,
     @player,
+    @player.to_border,
     { x: 0, y: 700, w: timer_flipped * 1280, h: 20, r: 100 }.solid!,
   ]
   args.outputs.debug << [
