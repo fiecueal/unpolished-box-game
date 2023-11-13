@@ -29,7 +29,7 @@ def boot args = $args
 
     # TODO: remove code below from :freefall and handle elsewhere
     if @player.bottom <= 0
-      @player.y               = @player.h / 2
+      @player.y               = 0
       @player.dy              = 0
       @player.flip_vertically = false
       @player.action          = @player_actions.grounded
@@ -40,14 +40,14 @@ def boot args = $args
 
   # coincidentally, max speed ends up being roughly equal to `accel / friction`
   # bad things happen with negative friction
-  @stat_mods = { accel: 2, jump: 2,  friction: 0.2 }
+  @stat_mods = { accel: 1, jump: 1,  friction: 0.1 }
 
   @player = {
     x: 640, y: 640,
     dx: 0, dy: 0,
     w: 64, h: 64,
     path: "sprites/fish.png",
-    angle: 0, anchor_x: 0.5, anchor_y: 0.5,
+    angle: 0,
     action: @player_actions.freefall,
     platform: nil,
   }
@@ -103,11 +103,11 @@ def reflect_player hit_block
     @player.y  = hit_block.bottom - @player.h
     @player.dy = -@player.dy
   elsif right_cl < left_cl
-    @player.x  = hit_block.right
+    @player.x  = hit_block.right - @player.dx
     @player.dx = -@player.dx
     @player.flip_horizontally = false
   else
-    @player.x  = hit_block.left - @player.w - 5
+    @player.x  = hit_block.left - @player.w - @player.dx
     @player.dx = -@player.dx
     @player.flip_horizontally = true
   end
