@@ -28,7 +28,7 @@ def boot args = $args
 
     # TODO: remove code below from :freefall and handle elsewhere
     if @player.bottom <= 0
-      @player.y               = 0
+      @player.y               = @player.h / 2
       @player.dy              = 0
       @player.flip_vertically = false
       @player.action          = @player_actions.grounded
@@ -42,20 +42,26 @@ def boot args = $args
   @stat_mods = { accel: 2, jump: 2,  friction: 0.2 }
 
   @player = {
-    x: 50, y: 500,
+    x: 640, y: 640,
     dx: 0, dy: 0,
     w: 64, h: 64,
     path: "sprites/fish.png",
-    angle: 0, anchor_x: 0.5, anchor_y: 0,
+    angle: 0, anchor_x: 0.5, anchor_y: 0.5,
     action: @player_actions.freefall,
   }
 
   @blocks = []
-  @blocks << stone(100, 70)
+  @blocks << new_block(500, 35)
+  @blocks << new_block(60, 335)
+
+  puts 'arrows: ←↑→'
 end
 
-def stone x, y
-  { x: x, y: y, w: 70, h: 70, path: "sprites/block_3.png", hp: 3 }
+def new_block x, y
+  { x: x, y: y, w: 70, h: 70,
+    path: "sprites/block_3.png",
+    anchor_x: 0.5, anchor_y: 0.5,
+    hp: 3 }
 end
 
 def reflect_player hit_block
@@ -80,19 +86,19 @@ def reflect_player hit_block
 end
 
 def tick args
-  @timer         = args.easing.ease(@level_start_tick, args.state.tick_count, 1200, :identity)
-  @timer_flipped = 1 - @timer
-
-  @player.action.call args
-  @player.x += @player.dx
-  @player.y += @player.dy
+  timer         = args.easing.ease(@level_start_tick, args.state.tick_count, 1200, :identity)
+  timer_flipped = 1 - timer
+  @player.x    += @player.dx
+  @player.y    += @player.dy
 
   reflect_player args.geometry.find_intersect_rect(@player, @blocks)
+
+  @player.action.call args
 
   args.outputs.primitives << [
     @blocks,
     @player,
-    { x: 0, y: 700, w: @timer_flipped * 1280, h: 20, r: 100 }.solid!,
+    { x: 0, y: 700, w: timer_flipped * 1280, h: 20, r: 100 }.solid!,
   ]
   args.outputs.debug << [
     args.gtk.framerate_diagnostics_primitives,
@@ -101,6 +107,10 @@ def tick args
   ]
 
   args.gtk.reset if args.inputs.keyboard.r
+
+  if args.inputs.mouse.click
+    @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y)
+  end
 
   # if args.inputs.keyboard.key_down.f
   #   args.gtk.console.show
