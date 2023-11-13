@@ -64,24 +64,37 @@ def new_block x, y
     hp: 3 }
 end
 
+# only handles collision when player is in motion
 def reflect_player hit_block
   return unless hit_block
-  @blocks.delete hit_block if (hit_block.hp -= 1).zero?
 
-  hit_block.path = "sprites/block_#{hit_block.hp}.png"
+  if hit_block.hp
+    @blocks.delete hit_block if (hit_block.hp -= 1).zero?
+    hit_block.path = "sprites/block_#{hit_block.hp}.png"
+  end
 
-  if @player.dx.to_i.zero?
-    if @player.dy > 0 then @player.y = hit_block.bottom - @player.h
-    else                   @player.y = hit_block.top
-    end
+  # calc'd based on hit_block perspective
+  # difference is negative if no collision
+  top_cl    = hit_block.top   - @player.bottom
+  right_cl  = hit_block.right - @player.left
+  bottom_cl = @player.top     - hit_block.bottom
+  left_cl   = @player.right   - hit_block.left
 
+  if top_cl < bottom_cl && top_cl < left_cl && top_cl < right_cl
+    @player.y  = hit_block.top
+    @player.dy = 0
+    @player.action = @player_actions.grounded
+  elsif bottom_cl < left_cl && bottom_cl < right_cl
+    @player.y  = hit_block.bottom - @player.h
     @player.dy = -@player.dy
-  elsif @player.dy.to_i.zero?
-    if @player.dx > 0 then @player.x = hit_block.left - @player.w
-    else                   @player.x = hit_block.right
-    end
-
-    @player.dx = -player.dx
+  elsif right_cl < left_cl
+    @player.x  = hit_block.right
+    @player.dx = -@player.dx
+    @player.flip_horizontally = false
+  else
+    @player.x  = hit_block.left - @player.w - 5
+    @player.dx = -@player.dx
+    @player.flip_horizontally = true
   end
 end
 
