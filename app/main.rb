@@ -1,15 +1,15 @@
 def boot args = $args
   # inputs.left_right only check wasd & arrows keys so ijl are checked separately
   @player_actions = { grounded: -> args {
+    # TODO: fix... something? this guard clause should not be needed
     return @player.action = @player_actions.freefall unless @player.platform
     if    args.inputs.keyboard.j then dir = -1
     elsif args.inputs.keyboard.l then dir = 1
     else                              dir = args.inputs.left_right
     end
 
-    @player.dx               += dir * @stat_mods.accel - @player.dx * @stat_mods.friction
-    @player.angle             = -@player.dx
-    @player.flip_horizontally = @player.dx < 0
+    @player.dx    += dir * @stat_mods.accel - @player.dx * @stat_mods.friction
+    @player.angle += @player.dx * 0.8 if dir.zero?
 
     # if player steps off current platform or it breaks,
     # check if a block exists just below the player and switch platforms
@@ -28,7 +28,7 @@ def boot args = $args
         @player.platform = new_block
       else
         @player.platform = nil
-        @player.action = @player_actions.freefall
+        @player.action   = @player_actions.freefall
       end
     end
 
@@ -39,7 +39,7 @@ def boot args = $args
       @player.platform = nil
     end
   }, jumping: -> args {
-    @player.angle = Math::atan(@player.dy / @player.dx) * 180 / Math::PI
+    # @player.angle = Math::atan(@player.dy / @player.dx) * 180 / Math::PI
 
     unless (args.inputs.up || args.inputs.keyboard.i) && @jump_tick.elapsed_time <= 10
       @player.dy    /= 2 # looks "smoother" when dy is halved for some reason
@@ -47,14 +47,14 @@ def boot args = $args
     end
   }, freefall: -> args {
     @player.dy   -= 1
-    @player.angle = Math::atan(@player.dy / @player.dx) * 180 / Math::PI
+    # @player.angle = Math::atan(@player.dy / @player.dx) * 180 / Math::PI
 
     # TODO: remove code below from :freefall and handle elsewhere
     if @player.bottom <= 0
-      @player.y               = 0
-      @player.dy              = 0
-      @player.flip_vertically = false
-      @player.action          = @player_actions.grounded
+      @player.y        = 0
+      @player.dy       = 0
+      @player.action   = @player_actions.grounded
+      @player.platform = { x: @player.x, y: @player.y, w: @player.w, h: 0 }
     end
   } }
 
@@ -65,10 +65,16 @@ def boot args = $args
   @stat_mods = { accel: 1, jump: 1,  friction: 0.1 }
 
   @player = {
-    x: 640, y: 640,
-    dx: 0, dy: 0,
-    w: 64, h: 64,
-    path: "sprites/fish.png",
+    x: 640,
+    y: 640,
+    dx: 0,
+    dy: 0,
+    w: 64,
+    h: 64,
+    path: "sprites/urchin.png",
+    r: 0,
+    g: 0,
+    b: 0,
     angle: 0,
     action: @player_actions.freefall,
     platform: nil,
@@ -80,8 +86,7 @@ def boot args = $args
     else
       new_block(64 * x, 0)
     end
-  end
-  @blocks.flatten!
+  end.flatten!
 
   puts 'arrows: ←↑→'
   puts @blocks
@@ -110,22 +115,26 @@ def reflect_player hit_block
   left_cl   = @player.right   - hit_block.left
 
   if top_cl < bottom_cl && top_cl < left_cl && top_cl < right_cl
+    # player lands on top of block
     @player.y        = hit_block.top
     @player.dy       = 0
     @player.action   = @player_actions.grounded
     @player.platform = hit_block
-  elsif bottom_cl < left_cl && bottom_cl < right_cl
+    puts "\nhit top"
+  elsif bottom_cl < top_cl && bottom_cl < left_cl && bottom_cl < right_cl
     @player.y  = hit_block.bottom - @player.h
     @player.dy = -@player.dy
-  elsif right_cl < left_cl
+    puts "\nhit bottom"
+  elsif right_cl < left_cl && right_cl < top_cl && right_cl < bottom_cl
     @player.x  = hit_block.right - @player.dx
     @player.dx = -@player.dx
-    @player.flip_horizontally = false
-  else
+    puts "\nhit right"
+  elsif left_cl < right_cl && left_cl < top_cl && left_cl < bottom_cl
     @player.x  = hit_block.left - @player.w - @player.dx
     @player.dx = -@player.dx
-    @player.flip_horizontally = true
+    puts "\nhit left"
   end
+  puts "\ntop:#{top_cl}\nbottom:#{bottom_cl}\nright:#{right_cl}\nleft:#{left_cl}"
 end
 
 def tick args
@@ -133,15 +142,14 @@ def tick args
   timer_flipped = 1 - timer
   @player.x    += @player.dx
   @player.y    += @player.dy
-
-  reflect_player args.geometry.find_intersect_rect(@player, @blocks)
+  @player.angle -= @player.dx
 
   @player.action.call args
+  reflect_player args.geometry.find_intersect_rect(@player, @blocks)
 
   args.outputs.primitives << [
     @blocks,
     @player,
-    @player.to_border,
     { x: 0, y: 700, w: timer_flipped * 1280, h: 20, r: 100 }.solid!,
   ]
 
@@ -160,6 +168,7 @@ def debug args
     when 2 # middle click to delete all blocks containing pointer
       (args.geometry.find_all_intersect_rect(args.inputs.mouse,@blocks)).each do |block|
         @blocks.delete block
+        block.hp = 0
       end
     when 4 # right click to spawn unbreakable block
       @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y)
