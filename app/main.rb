@@ -1,15 +1,15 @@
 def boot args = $args
   # inputs.left_right only check wasd & arrows keys so ijl are checked separately
   @player_actions = { grounded: -> args {
-    # TODO: fix... something? this guard clause should not be needed
+    # TODO: fix... something? this guard clause should not be needed;
+    # player should never be set to grounded without a platform
     return @player.action = @player_actions.freefall unless @player.platform
     if    args.inputs.keyboard.j then dir = -1
     elsif args.inputs.keyboard.l then dir = 1
     else                              dir = args.inputs.left_right
     end
 
-    @player.dx    += dir * @stat_mods.accel - @player.dx * @stat_mods.friction
-    @player.angle += @player.dx * 0.8 if dir.zero?
+    @player.dx += dir * @stat_mods.accel - @player.dx * @stat_mods.friction
 
     # if player steps off current platform or it breaks,
     # check if a block exists just below the player and switch platforms
@@ -69,8 +69,8 @@ def boot args = $args
     y: 640,
     dx: 0,
     dy: 0,
-    w: 64,
-    h: 64,
+    w: 40,
+    h: 40,
     path: "sprites/urchin.png",
     r: 0,
     g: 0,
@@ -93,13 +93,12 @@ def boot args = $args
 end
 
 def new_block x, y, hp = nil
-  { x: x, y: y, w: 64, h: 64,
-    path: "sprites/block_#{hp}.png",
-    hp: hp }
+  { x: x, y: y, w: 64, h: 64, path: "sprites/block_#{hp}.png", hp: hp }
 end
 
 # only handles collision when player is in motion
-def reflect_player hit_block
+def find_collision args
+  hit_block = args.geometry.find_intersect_rect(@player, @blocks)
   return unless hit_block
 
   if hit_block.hp
@@ -108,7 +107,7 @@ def reflect_player hit_block
   end
 
   # calc'd based on hit_block perspective
-  # difference is negative if no collision
+  # always positive, hit direction is the smallest number
   top_cl    = hit_block.top   - @player.bottom
   right_cl  = hit_block.right - @player.left
   bottom_cl = @player.top     - hit_block.bottom
@@ -140,12 +139,13 @@ end
 def tick args
   timer         = args.easing.ease(@level_start_tick, args.state.tick_count, 1200, :identity)
   timer_flipped = 1 - timer
-  @player.x    += @player.dx
-  @player.y    += @player.dy
-  @player.angle -= @player.dx
 
   @player.action.call args
-  reflect_player args.geometry.find_intersect_rect(@player, @blocks)
+  find_collision args
+
+  @player.x     += @player.dx
+  @player.y     += @player.dy
+  @player.angle -= @player.dx * 2
 
   args.outputs.primitives << [
     @blocks,
@@ -166,7 +166,7 @@ def debug args
     when 1 # left click to spawn breakable block
       @blocks << new_block(args.inputs.mouse.x, args.inputs.mouse.y, 3)
     when 2 # middle click to delete all blocks containing pointer
-      (args.geometry.find_all_intersect_rect(args.inputs.mouse,@blocks)).each do |block|
+      args.geometry.find_all_intersect_rect(args.inputs.mouse,@blocks).each do |block|
         @blocks.delete block
         block.hp = 0
       end
@@ -190,5 +190,3 @@ end
 def reset
   boot
 end
-
-$gtk.reset
