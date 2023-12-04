@@ -131,6 +131,7 @@ def init args
                                       }
   args.state.player ||= new_block 100, 360 - 50, 50, 50,
                                   {
+                                    b: 200,
                                     dx: 0,
                                     dy: 0,
                                     speed: 1,
@@ -140,13 +141,24 @@ def init args
                                   }
 
   args.state.level ||= 0
-  # first 4 platforms are always the bounds of the screen
+  # first 4 platforms are always the bounds of the screen in order:
+  # bottom, top, left, right
   args.state.platforms ||= [
     new_block(0, 0, 1280, 25),
     new_block(0, 720 - 25, 1280, 25),
     new_block(0, 0, 25, 720),
     new_block(1280 - 25, 0, 25, 720),
   ]
+
+  args.state.plat_borders ||= args.state.platforms.map do |platform|
+    {
+      x: platform.x - 1,
+      y: platform.y - 1,
+      w: platform.w + 2,
+      h: platform.h + 2,
+      primitive_marker: :border,
+    }
+  end
 end
 
 def tick args
@@ -157,6 +169,7 @@ def tick args
 
   args.outputs.primitives << [
     # args.state.background,
+    args.state.plat_borders,
     args.state.platforms,
     args.state.player
   ]
