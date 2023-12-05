@@ -13,7 +13,6 @@ def new_block x, y, w, h, props = {}
 end
 
 def calc_timer args
-  args.state.timer_start_tick ||= 0
   args.state.timer = {
     x: 0,
     y: 0,
@@ -83,6 +82,15 @@ end
 def find_collision args, direction
   platform = args.geometry.find_intersect_rect args.state.player, args.state.platforms
   return unless platform
+  return if platform.is_untouchable
+
+  if platform.is_respawner
+    args.state.player.dx = 0
+    args.state.player.dy = 0
+    args.state.player.x = args.state.respawn.x
+    args.state.player.y = args.state.respawn.y
+    return
+  end
 
   if direction == :x
     if args.state.player.dx.positive? then args.state.player.x = platform.left - args.state.player.w
@@ -115,6 +123,82 @@ def calc_player_movement args
   find_collision args, :y
 end
 
+def calc_level_progress args
+  args.state.timer_start_tick = args.state.tick_count unless args.state.player.moved
+  calc_timer args
+
+  if args.state.player.intersect_rect? args.state.goal
+    args.state.level += 1
+    start_next_level args
+  end
+end
+
+def start_next_level args
+  args.state.player.moved = false
+  args.state.player.platform = nil
+  args.state.player.dx = 0
+  args.state.player.dy = 0
+  # first 4 platforms are always the bounds of the screen in order:
+  # bottom, top, left, right
+  args.state.platforms = [
+    new_block(0, 0, 1280, 25),
+    new_block(0, 720 - 25, 1280, 25),
+    new_block(0, 0, 25, 720),
+    new_block(1280 - 25, 0, 25, 720),
+  ]
+
+  case args.state.level
+  when 1
+    args.state.player.x = 100
+    args.state.player.y = 360 - args.state.player.h
+    args.state.goal.x = 1135
+    args.state.goal.y = 100
+    args.state.platforms += [
+      new_block(212, 25, 50, 250),
+      new_block(612, 25, 50, 250),
+      new_block(1012, 25, 50, 250),
+    ]
+  when 2
+    args.state.player.x = 100
+    args.state.player.y = 360 - args.state.player.h
+    args.state.goal.x = 1135
+    args.state.goal.y = 100
+    args.state.respawn = new_block 100, 25, 50, 50, { is_untouchable: true, g: 200, b: 200 }
+    args.state.platforms += [
+      new_block(212, 25, 50, 250),
+      new_block(612, 25, 50, 250),
+      new_block(1012, 25, 50, 250),
+      args.state.respawn,
+      new_block(262, 25, 350, 20, { is_respawner: true, g: 200, b: 200 }),
+      new_block(662, 25, 350, 20, { is_respawner: true, g: 200, b: 200 }),
+      new_block(1062, 25, 200, 20, { is_respawner: true, g: 200, b: 200 }),
+    ]
+    puts args.state.platforms
+  when 3
+  when 4
+  when 5
+  else
+    args.state.goal.y = 640
+    args.outputs.static_labels << {
+      x: args.grid.w / 2,
+      y: args.grid.h / 2,
+      text: "congrats... i'm out of level ideas (and time :P)",
+      alignment_enum: 1,
+      vertical_alignment_enum: 1,
+    }
+  end
+
+  args.state.plat_borders = args.state.platforms.map do |platform|
+    {
+      x: platform.x - 1,
+      y: platform.y - 1,
+      w: platform.w + 2,
+      h: platform.h + 2,
+      primitive_marker: :border,
+    }
+  end
+end
+
 def init args
   args.state.background ||= new_block 0, 0, 1280, 720,
                                       {
@@ -141,28 +225,11 @@ def init args
                                   dy: 5,
                                 }
   args.state.level ||= 0
-  # first 4 platforms are always the bounds of the screen in order:
-  # bottom, top, left, right
-  args.state.platforms ||= [
-    new_block(0, 0, 1280, 25),
-    new_block(0, 720 - 25, 1280, 25),
-    new_block(0, 0, 25, 720),
-    new_block(1280 - 25, 0, 25, 720),
-  ]
-  args.state.plat_borders ||= args.state.platforms.map do |platform|
-    {
-      x: platform.x - 1,
-      y: platform.y - 1,
-      w: platform.w + 2,
-      h: platform.h + 2,
-      primitive_marker: :border,
-    }
-  end
 end
 
 def tick args
   init args
-  calc_timer args
+  calc_level_progress args
   draw_background args
   calc_player_movement args
 
@@ -198,5 +265,9 @@ def debug args
     h: args.inputs.mouse.y - args.state.first_point[1],
   } if args.state.first_point
 
+  if args.inputs.keyboard.key_down.n
+    args.state.level += 1
+    start_next_level args
+  end
   args.gtk.reset if args.inputs.keyboard.r
 end
