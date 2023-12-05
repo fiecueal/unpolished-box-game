@@ -24,18 +24,17 @@ def calc_timer args
   }
 end
 
-def draw_backgrounds args
+def draw_background args
   args.state.background.source_x += args.state.background.dx
   args.state.background.source_y += args.state.background.dy
+  # 2048x2048 is the unnecessarily large size of the sprites used by everything
   args.state.background.dx = -args.state.background.dx if args.state.background.source_x <= 0 ||
                                                           args.state.background.source_x + 1280 >= 2048
   args.state.background.dy = -args.state.background.dy if args.state.background.source_y <= 0 ||
                                                           args.state.background.source_y + 720 >= 2048
-
   args.outputs[:background].transient!
   args.outputs[:background].w = 1280
   args.outputs[:background].h = 720
-
   args.outputs[:background].primitives << [
     args.state.background,
     args.state.timer,
@@ -50,20 +49,19 @@ end
 def calc_player_running args
   return args.state.player.action = :falling unless args.state.player.platform
 
-  # if player runs off the platform, start falling
-  if args.state.player.right < args.state.player.platform.left ||
-    args.state.player.left > args.state.player.platform.right
-    args.state.player.platform = nil
-    args.state.player.action = :falling
-    return
-  end
-
   if    args.inputs.keyboard.j then dir = -1
   elsif args.inputs.keyboard.l then dir = 1
   else                              dir = args.inputs.left_right
   end
 
   args.state.player.dx += dir * args.state.player.speed - args.state.player.dx * args.state.player.friction
+
+  # if player runs off the platform, start falling
+  if args.state.player.right < args.state.player.platform.left ||
+    args.state.player.left > args.state.player.platform.right
+    args.state.player.platform = nil
+    args.state.player.action = :falling
+  end
 
   if args.inputs.up || args.inputs.keyboard.i
     args.state.player.jumped_at = args.state.tick_count
@@ -136,7 +134,6 @@ def init args
                                     friction: 0.1,
                                     action: :running
                                   }
-
   args.state.level ||= 0
   # first 4 platforms are always the bounds of the screen in order:
   # bottom, top, left, right
@@ -146,7 +143,6 @@ def init args
     new_block(0, 0, 25, 720),
     new_block(1280 - 25, 0, 25, 720),
   ]
-
   args.state.plat_borders ||= args.state.platforms.map do |platform|
     {
       x: platform.x - 1,
@@ -161,19 +157,39 @@ end
 def tick args
   init args
   calc_timer args
-  draw_backgrounds args
-  calc_player_position args
+  draw_background args
+  calc_player_movement args
 
   args.outputs.primitives << [
-    # args.state.background,
     args.state.plat_borders,
+    # args.state.background,
     args.state.platforms,
     args.state.player
   ]
 
-  #===========================================================================#
+  debug args
+end
 
-  args.state.platforms << new_block(args.inputs.mouse.x, args.inputs.mouse.y, 200, 200) if args.inputs.mouse.click
+def debug args
+  if args.inputs.mouse.click
+    if args.state.first_point
+      args.state.platforms << new_block(args.state.first_point[0],
+                                        args.state.first_point[1],
+                                        args.inputs.mouse.x - args.state.first_point[0],
+                                        args.inputs.mouse.y - args.state.first_point[1])
+      args.state.first_point = nil
+    else
+      args.state.first_point = [ args.inputs.mouse.x, args.inputs.mouse.y ]
+    end
+  end
+
+  args.outputs.primitives << args.gtk.framerate_diagnostics_primitives
+  args.outputs.borders << {
+    x: args.state.first_point[0],
+    y: args.state.first_point[1],
+    w: args.inputs.mouse.x - args.state.first_point[0],
+    h: args.inputs.mouse.y - args.state.first_point[1],
+  } if args.state.first_point
 
   args.gtk.reset if args.inputs.keyboard.r
 end
