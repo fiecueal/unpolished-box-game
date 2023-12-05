@@ -213,6 +213,7 @@ def init args
                                         dx: 0.4,
                                         dy: 0.4,
                                       }
+  # player max speed ends up being speed * friction
   args.state.player ||= new_block 50, 50, 50, 50,
                                   {
                                     b: 200,
@@ -221,13 +222,12 @@ def init args
                                     speed: 1,
                                     jump: 1,
                                     friction: 0.1,
-                                    action: :running,
+                                    action: :falling,
                                     moved: false
                                   }
   args.state.goal ||= new_block 50, 50, 50, 50,
                                 {
                                   r: 200,
-                                  g: 200,
                                   dx: 5,
                                   dy: 5,
                                 }
@@ -237,17 +237,17 @@ end
 def tick args
   init args
   calc_level_progress args
-  draw_background args
   calc_player_movement args
+  draw_background args
 
   args.outputs.primitives << [
     args.state.plat_borders,
-    # args.state.background,
     args.state.platforms,
     args.state.goal,
     args.state.player,
   ]
 
+  args.state.start_next_level args if args.inputs.keyboard.key_down.r
   debug args
 end
 
@@ -276,5 +276,5 @@ def debug args
     args.state.level += 1
     start_next_level args
   end
-  args.gtk.reset if args.inputs.keyboard.r
+  args.gtk.reset if args.inputs.keyboard.b
 end
