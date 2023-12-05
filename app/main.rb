@@ -134,10 +134,16 @@ def calc_level_progress args
 end
 
 def start_next_level args
-  args.state.player.moved = false
-  args.state.player.platform = nil
-  args.state.player.dx = 0
-  args.state.player.dy = 0
+  args.state.player << {
+    dx: 0,
+    dy: 0,
+    speed: 1,
+    jump: 1,
+    friction: 0.1,
+    action: :falling,
+    moved: false,
+    platform: nil
+  }
   # first 4 platforms are always the bounds of the screen in order:
   # bottom, top, left, right
   args.state.platforms = [
@@ -149,29 +155,30 @@ def start_next_level args
 
   case args.state.level
   when 1
-    args.state.player.x = 100
-    args.state.player.y = 360 - args.state.player.h
-    args.state.goal.x = 1135
+    args.state.speed =
+    args.state.player.x = 180 - 50
+    args.state.player.y = 360 - 50
+    args.state.goal.x = 1120 - 25
     args.state.goal.y = 100
     args.state.platforms += [
-      new_block(212, 25, 50, 250),
-      new_block(612, 25, 50, 250),
-      new_block(1012, 25, 50, 250),
+      new_block(320 - 25, 25, 50, 250),
+      new_block(640 - 25, 25, 50, 250),
+      new_block(960 - 25, 25, 50, 250),
     ]
   when 2
-    args.state.player.x = 100
-    args.state.player.y = 360 - args.state.player.h
-    args.state.goal.x = 1135
-    args.state.goal.y = 100
-    args.state.respawn = new_block 100, 25, 50, 50, { is_untouchable: true, g: 200, b: 200 }
+    args.state.player.x = 75
+    args.state.player.y = 360 - 50
+    args.state.goal.x = 1280 - 75
+    args.state.goal.y = 45
+    args.state.respawn = new_block 75, 25, 50, 50, { is_untouchable: true, g: 200, b: 200 }
     args.state.platforms += [
-      new_block(212, 25, 50, 250),
-      new_block(612, 25, 50, 250),
-      new_block(1012, 25, 50, 250),
+      new_block(200 - 25,  25, 50, 250),
+      new_block(640 - 25,  25, 50, 250),
+      new_block(1080 - 25, 25, 50, 250),
       args.state.respawn,
-      new_block(262, 25, 350, 20, { is_respawner: true, g: 200, b: 200 }),
-      new_block(662, 25, 350, 20, { is_respawner: true, g: 200, b: 200 }),
-      new_block(1062, 25, 200, 20, { is_respawner: true, g: 200, b: 200 }),
+      new_block(200 + 25,  25, 440 - 50, 20, { is_respawner: true, g: 200, b: 200 }),
+      new_block(640 + 25,  25, 440 - 50, 20, { is_respawner: true, g: 200, b: 200 }),
+      new_block(1080 + 25, 25, 150,      20, { is_respawner: true, g: 200, b: 200 }),
     ]
     puts args.state.platforms
   when 3
