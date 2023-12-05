@@ -82,34 +82,31 @@ end
 
 def calc_player_falling args
   args.state.player.dy -= 1
-
-  if args.state.player.bottom <= args.state.platforms[0].top
-    args.state.player.y = args.state.platforms[0].top
-    args.state.player.dy = 0
-    args.state.player.action = :running
-    args.state.player.platform = args.state.platforms[0]
-  end
 end
 
-def check_collisions args
-  collisions = args.geometry.find_all_intersect_rect args.state.player, args.state.platforms
-  return if collisions.empty?
+def find_collision args, direction
+  platform = args.geometry.find_intersect_rect args.state.player, args.state.platforms
+  return unless platform
 
-  x_dir = args.state.player.dx.positive? ? :right : :left
-  y_dir = args.state.player.dy.positive? ? :top : :bottom
-
-  collisions.each do |platform|
-    if args.state.player.dx.positive?
-
-    else
+  if direction == :x
+    if args.state.player.dx.positive? then args.state.player.x = platform.left - args.state.player.w
+    else                                   args.state.player.x = platform.right
     end
+    args.state.player.dx = -args.state.player.dx
+  elsif direction == :y then
     if args.state.player.dy.positive?
-    else
+      args.state.player.y = platform.bottom - args.state.player.h
+      args.state.player.dy = -args.state.player.dy
+    else # land on the surface if collided with top of platform
+      args.state.player.y = platform.top
+      args.state.player.dy = 0
+      args.state.player.action = :running
+      args.state.player.platform = platform
     end
   end
 end
 
-def calc_player_position args
+def calc_player_movement args
   case args.state.player.action
   when :running then calc_player_running args
   when :jumping then calc_player_jumping args
@@ -117,9 +114,9 @@ def calc_player_position args
   end
 
   args.state.player.source_x = args.state.player.x += args.state.player.dx
+  find_collision args, :x
   args.state.player.source_y = args.state.player.y += args.state.player.dy
-
-  check_collisions args
+  find_collision args, :y
 end
 
 def init args
