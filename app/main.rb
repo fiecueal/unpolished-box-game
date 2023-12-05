@@ -134,6 +134,13 @@ def init args
                                     friction: 0.1,
                                     action: :running
                                   }
+  args.state.goal ||= new_block 50, 50, 50, 50,
+                                {
+                                  r: 200,
+                                  g: 200,
+                                  dx: 5,
+                                  dy: 5,
+                                }
   args.state.level ||= 0
   # first 4 platforms are always the bounds of the screen in order:
   # bottom, top, left, right
@@ -164,7 +171,8 @@ def tick args
     args.state.plat_borders,
     # args.state.background,
     args.state.platforms,
-    args.state.player
+    args.state.goal,
+    args.state.player,
   ]
 
   debug args
