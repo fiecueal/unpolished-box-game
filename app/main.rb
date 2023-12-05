@@ -41,11 +41,6 @@ def draw_background args
   ]
 end
 
-def spawn_platforms args
-  args.state.platforms = [
-  ]
-end
-
 def calc_player_running args
   return args.state.player.action = :falling unless args.state.player.platform
 
@@ -53,6 +48,8 @@ def calc_player_running args
   elsif args.inputs.keyboard.l then dir = 1
   else                              dir = args.inputs.left_right
   end
+
+  args.state.player.moved = true unless dir.zero?
 
   args.state.player.dx += dir * args.state.player.speed - args.state.player.dx * args.state.player.friction
 
@@ -67,7 +64,8 @@ def calc_player_running args
     args.state.player.jumped_at = args.state.tick_count
     args.state.player.dy = 20 * args.state.player.jump
     args.state.player.action = :jumping
-    platform = nil
+    args.state.player.platform = nil
+    args.state.player.moved = true
   end
 end
 
@@ -124,7 +122,7 @@ def init args
                                         dx: 0.4,
                                         dy: 0.4,
                                       }
-  args.state.player ||= new_block 100, 360 - 50, 50, 50,
+  args.state.player ||= new_block 50, 50, 50, 50,
                                   {
                                     b: 200,
                                     dx: 0,
@@ -132,7 +130,8 @@ def init args
                                     speed: 1,
                                     jump: 1,
                                     friction: 0.1,
-                                    action: :running
+                                    action: :running,
+                                    moved: false
                                   }
   args.state.goal ||= new_block 50, 50, 50, 50,
                                 {
