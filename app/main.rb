@@ -197,6 +197,13 @@ def start_next_level args
       primitive_marker: :border,
     }
   end
+  args.state.plat_borders << {
+    x: args.state.goal.x - 1,
+    y: args.state.goal.y - 1,
+    w: args.state.goal.w + 2,
+    h: args.state.goal.h + 2,
+    primitive_marker: :border,
+  }
 end
 
 def init args
