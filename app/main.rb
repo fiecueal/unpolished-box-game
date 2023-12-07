@@ -12,17 +12,6 @@ def new_block x, y, w, h, props = {}
   } << props
 end
 
-def calc_timer args
-  args.state.timer = {
-    x: 0,
-    y: 0,
-    w: 1280 * args.easing.ease(args.state.timer_start_tick, args.state.tick_count, 1200, :quad, :flip),
-    h: 720,
-    path: :pixel,
-    a: 100,
-  }
-end
-
 def draw_background args
   args.state.background.source_x += args.state.background.dx
   args.state.background.source_y += args.state.background.dy
@@ -123,17 +112,44 @@ def calc_player_movement args
   find_collision args, :y
 end
 
+def calc_timer args, progress
+  args.state.timer = {
+    x: 0,
+    y: 0,
+    w: 1280 * progress,
+    h: 720,
+    path: :pixel,
+    a: 100,
+  }
+end
+
 def calc_level_progress args
   args.state.timer_start_tick = args.state.tick_count unless args.state.player.moved
-  calc_timer args
+  progress = args.easing.ease(args.state.timer_start_tick,
+                              args.state.tick_count,
+                              20.seconds,
+                              :quad, :flip)
+  if progress.zero?
+    args.state.lives -= 1
+    if args.state.lives.zero?
+      args.state.lives = 3
+      args.state.level -= 1
+      args.state.level = 1 if args.state.level.zero?
+    end
+    start_level args
+    return
+  end
+
+  calc_timer args, progress
 
   if args.state.player.intersect_rect? args.state.goal
     args.state.level += 1
-    start_next_level args
+    args.state.lives += 3
+    start_level args
   end
 end
 
-def start_next_level args
+def start_level args
   args.state.player << {
     dx: 0,
     dy: 0,
@@ -155,7 +171,6 @@ def start_next_level args
 
   case args.state.level
   when 1
-    args.state.speed =
     args.state.player.x = 180 - 50
     args.state.player.y = 360 - 50
     args.state.goal.x = 1120 - 25
@@ -180,7 +195,6 @@ def start_next_level args
       new_block(640 + 25,  25, 440 - 50, 20, { is_respawner: true, g: 200, b: 200 }),
       new_block(1080 + 25, 25, 150,      20, { is_respawner: true, g: 200, b: 200 }),
     ]
-    puts args.state.platforms
   when 3
   when 4
   when 5
@@ -239,6 +253,7 @@ def init args
                                   dy: 5,
                                 }
   args.state.level ||= 0
+  args.state.lives ||= 3
 end
 
 def tick args
@@ -254,7 +269,7 @@ def tick args
     args.state.player,
   ]
 
-  args.state.start_next_level args if args.inputs.keyboard.key_down.r
+  args.state.start_level args if args.inputs.keyboard.key_down.r
   debug args
 end
 
@@ -281,7 +296,7 @@ def debug args
 
   if args.inputs.keyboard.key_down.n
     args.state.level += 1
-    start_next_level args
+    start_level args
   end
   args.gtk.reset if args.inputs.keyboard.b
 end
