@@ -106,10 +106,15 @@ def calc_player_movement args
   when :falling then calc_player_falling args
   end
 
-  args.state.player.source_x = args.state.player.x += args.state.player.dx
+  args.state.player.x += args.state.player.dx
   find_collision args, :x
-  args.state.player.source_y = args.state.player.y += args.state.player.dy
+  args.state.player.y += args.state.player.dy
   find_collision args, :y
+
+  args.state.player.source_x  = args.state.player.x
+  args.state.player.source_y  = args.state.player.y
+  args.state.player.outline.x = args.state.player.x - 1
+  args.state.player.outline.y = args.state.player.y - 1
 end
 
 def calc_timer args, progress
@@ -244,7 +249,8 @@ def init args
                                     jump: 1,
                                     friction: 0.1,
                                     action: :falling,
-                                    moved: false
+                                    moved: false,
+                                    outline: { x: 49, y: 49, w: 52, h: 52, primitive_marker: :border }
                                   }
   args.state.goal ||= new_block 50, 50, 50, 50,
                                 {
@@ -264,6 +270,7 @@ def tick args
 
   args.outputs.primitives << [
     args.state.plat_borders,
+    args.state.player.outline,
     args.state.platforms,
     args.state.goal,
     args.state.player,
